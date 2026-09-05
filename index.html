@@ -4,7 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>রক্তদান প্রো - লাইভ ব্লাড ডোনেশন অ্যাপ</title>
-    
+
+	<link rel="manifest" href="./manifest.json">
+	
     <!-- App Favicon / লোগো (গুগল ড্রাইভ ডাইরেক্ট লিংক) -->
     <link rel="icon" type="image/png" href="https://lh3.googleusercontent.com/d/1_cRfZ3IeCWXrd2j0AqbbSVXaEqsbCRtf">
     <link rel="apple-touch-icon" href="https://lh3.googleusercontent.com/d/1_cRfZ3IeCWXrd2j0AqbbSVXaEqsbCRtf">
@@ -125,6 +127,26 @@
                 <span class="text-[10px] font-medium mt-0.5" id="nav-text-settings">সেটিংস</span>
             </button>
         </nav>
+
+		<!-- 📱 কাস্টম PWA ইনস্টল পপ-আপ -->
+<div id="pwa-install-banner" class="hidden fixed bottom-20 left-4 right-4 bg-slate-900 text-white p-4 rounded-2xl shadow-2xl border border-red-500/40 z-50 flex items-center justify-between animate-custom-popup">
+    <div class="flex items-center space-x-3">
+        <img src="https://cdn-icons-png.flaticon.com/512/1212/1212620.png" class="w-10 h-10 rounded-xl bg-white p-1">
+        <div>
+            <h4 class="font-bold text-xs">রক্তদান প্রো অ্যাপ</h4>
+            <p class="text-[10px] text-slate-300">ফোনে সরাসরি ইন্সটল করে সহজে ব্যবহার করুন</p>
+        </div>
+    </div>
+    <div class="flex items-center space-x-1.5">
+        <button onclick="dismissInstallPrompt()" class="text-slate-400 hover:text-white px-2 py-1 text-xs">পরে</button>
+        <button onclick="triggerAppInstall()" class="bg-red-600 hover:bg-red-700 text-white font-bold px-3 py-1.5 rounded-xl text-xs shadow-md">
+            ইন্সটল
+        </button>
+    </div>
+</div>
+
+
+		
 
         <!-- অ্যাপের নিজস্ব কাস্টম অ্যালার্ট পপআপ মডাল -->
         <div id="inapp-custom-alert-modal" class="hidden fixed inset-0 z-50 flex justify-center items-center p-4 bg-black/60 backdrop-blur-sm">
@@ -2533,6 +2555,57 @@ function setupFirefoxPopunder() {
 
 // অ্যাপ চালু হওয়ার সাথে সাথে লিসেনার শুরু হবে
 initAppAdListener();
+
+
+		// ==========================================
+// 📲 Google Chrome PWA Auto Install Prompt
+// ==========================================
+let deferredPrompt = null;
+
+window.addEventListener('beforeinstallprompt', (e) => {
+    // ব্রাউজারের ডিফল্ট আচরণ থামানো
+    e.preventDefault();
+    deferredPrompt = e;
+
+    // ইউজার যদি আগে Cancel না করে থাকে, তবে ২ সেকেন্ড পর পপআপ দেখাবে
+    if (!localStorage.getItem('pwa_prompt_dismissed')) {
+        setTimeout(() => {
+            const banner = document.getElementById('pwa-install-banner');
+            if (banner) banner.classList.remove('hidden');
+        }, 2000);
+    }
+});
+
+window.triggerAppInstall = async function() {
+    const banner = document.getElementById('pwa-install-banner');
+    if (banner) banner.classList.add('hidden');
+
+    if (deferredPrompt) {
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        if (outcome === 'accepted') {
+            console.log('User installed the app');
+        }
+        deferredPrompt = null;
+    }
+};
+
+window.dismissInstallPrompt = function() {
+    const banner = document.getElementById('pwa-install-banner');
+    if (banner) banner.classList.add('hidden');
+    // ১ দিনের জন্য পপআপ আর দেখাবে না
+    localStorage.setItem('pwa_prompt_dismissed', 'true');
+};
+
+// সার্ভিস ওয়ার্কার রেজিস্টার করা
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js')
+            .then(reg => console.log('SW Registered!', reg.scope))
+            .catch(err => console.log('SW Failed!', err));
+    });
+}
+		
     </script>
 </body>
 </html>
